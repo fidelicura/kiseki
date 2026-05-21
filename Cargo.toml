@@ -1,0 +1,41 @@
+[package]
+name = "kiseki"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "A Rust crate for programmatically producing Kanata-format processor pipeline traces, compatible with the Konata visualizer."
+license = "Apache-2.0"
+repository = "https://github.com/fidelicura/kiseki"
+homepage = "https://github.com/fidelicura/kiseki"
+documentation = "https://docs.rs/kiseki"
+readme = "README.md"
+authors = ["Kirill Bezuglyi <fidelicura@gmail.com>", "et al."]
+keywords = ["kanata", "konata", "trace", "pipeline", "simulator"]
+categories = ["development-tools::profiling", "encoding", "visualization"]
+include = ["src/**/*", "README.md", "LICENSE"]
+
+[dependencies]
+fixedbitset = "0.5.7"
+
+[dev-dependencies]
+criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+pretty_assertions = "1.4"
+
+[[bench]]
+name = "trace"
+harness = false
+
+[lints.rust]
+missing_docs = "warn"
+unreachable_pub = "warn"
+unsafe_code = "forbid"
+unused_must_use = "deny"
+
+[lints.clippy]
+missing_errors_doc = "allow"
+module_name_repetitions = "allow"
+pedantic = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
