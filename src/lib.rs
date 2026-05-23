@@ -411,6 +411,9 @@ impl<C: Config> Trace<C> {
     pub fn end(&mut self, id: Id, lane: Lane, stage: &C::Stage) -> Result {
         if C::VALIDATE {
             self.validator.check(id)?;
+        }
+
+        if C::SANITIZE {
             Sanitizer::sanitize(&stage)?;
         }
 
@@ -451,6 +454,9 @@ impl<C: Config> Trace<C> {
     pub fn stage(&mut self, id: Id, lane: Lane, stage: &C::Stage, dependency: bool) -> Result {
         if C::VALIDATE {
             self.validator.check(id)?;
+        }
+
+        if C::SANITIZE {
             Sanitizer::sanitize(&stage)?;
         }
 
@@ -1177,6 +1183,68 @@ mod tests {
         let bytes = trace.finish()?;
         let text = std::str::from_utf8(&bytes).unwrap();
         assert!(text.contains("L\t0\t0\ttab\there\n"));
+        Ok(())
+    }
+
+    #[test]
+    fn stage_sanitize_disabled_passes_forbidden_chars() -> Result {
+        let mut trace = Trace::<CfgNoSanitize>::new(0, Vec::new())?;
+        let id = trace.start(0, 0)?;
+        trace.stage(id, 0, &"tab\there", false)?;
+        trace.retire(id)?;
+        let bytes = trace.finish()?;
+        let text = std::str::from_utf8(&bytes).unwrap();
+        assert!(text.contains("S\t0\t0\ttab\there\n"));
+        Ok(())
+    }
+
+    #[test]
+    fn end_sanitize_disabled_passes_forbidden_chars() -> Result {
+        let mut trace = Trace::<CfgNoSanitize>::new(0, Vec::new())?;
+        let id = trace.start(0, 0)?;
+        trace.end(id, 0, &"tab\there")?;
+        trace.retire(id)?;
+        let bytes = trace.finish()?;
+        let text = std::str::from_utf8(&bytes).unwrap();
+        assert!(text.contains("E\t0\t0\ttab\there\n"));
+        Ok(())
+    }
+
+    #[test]
+    fn stage_validate_disabled_still_sanitizes() -> Result {
+        let mut trace = Trace::<CfgNoValidate>::new(0, Vec::new())?;
+        let err = trace
+            .stage(Id::new(0), 0, &"bad\tstage", false)
+            .unwrap_err();
+        assert!(matches!(err, Error::InvalidLabel(s) if s == "bad\tstage"));
+        Ok(())
+    }
+
+    #[test]
+    fn end_validate_disabled_still_sanitizes() -> Result {
+        let mut trace = Trace::<CfgNoValidate>::new(0, Vec::new())?;
+        let err = trace.end(Id::new(0), 0, &"bad\tstage").unwrap_err();
+        assert!(matches!(err, Error::InvalidLabel(s) if s == "bad\tstage"));
+        Ok(())
+    }
+
+    #[test]
+    fn stage_with_tab_is_rejected() -> Result {
+        let mut trace = make(0);
+        let id = trace.start(0, 0)?;
+        let err = trace.stage(id, 0, &"bad\tstage", false).unwrap_err();
+        assert!(matches!(err, Error::InvalidLabel(s) if s == "bad\tstage"));
+        trace.retire(id)?;
+        Ok(())
+    }
+
+    #[test]
+    fn end_with_tab_is_rejected() -> Result {
+        let mut trace = make(0);
+        let id = trace.start(0, 0)?;
+        let err = trace.end(id, 0, &"bad\tstage").unwrap_err();
+        assert!(matches!(err, Error::InvalidLabel(s) if s == "bad\tstage"));
+        trace.retire(id)?;
         Ok(())
     }
 
