@@ -91,10 +91,6 @@ pub trait Config {
     /// - `true`: [`Trace`] tracks the instructions lifecycle
     ///   and reports lifecycle violations as [`Error`]s.
     /// - `false`: the tracking and checks are compiled away.
-    ///
-    /// The crate's test suite only exercises the `true` (validating)
-    /// path. The `false` path is a thin opt-out that bypasses the
-    /// same code paths and is not covered.
     const VALIDATE: bool = true;
 
     /// - `true`: every label text passed to [`Trace::label`] is
@@ -145,7 +141,7 @@ impl Id {
         Self(old)
     }
 
-    /// Return the wrapped [`u32`] as an index ([`usize`]) for a bitmap.
+    /// Return the wrapped [`u32`] as an index for a bitset.
     const fn index(self) -> usize {
         self.0 as _
     }
@@ -258,7 +254,7 @@ impl<C: Config> Validator<C> {
 }
 
 //////////////////////////////////////////////////////////////////////
-// Trace
+// Sanitizer
 //////////////////////////////////////////////////////////////////////
 
 /// Field-value validator that rejects strings whose contents would
@@ -269,8 +265,8 @@ struct Sanitizer;
 
 impl Sanitizer {
     /// Render `text` to a [`String`] and reject it with
-    /// [`Error::InvalidLabel`] when it contains any character that
-    /// is forbidden inside a Kanata field (`\t`, `\n`, `\r`).
+    /// [`Error::InvalidLabel`] when it contains any character
+    /// that is forbidden inside a Kanata field (`\t`, `\n`, `\r`).
     fn sanitize<T>(text: &T) -> Result
     where
         T: std::fmt::Display,
@@ -331,8 +327,8 @@ impl<C: Config> Trace<C> {
 }
 
 impl<C: Config> Trace<C> {
-    /// Create a new `Trace`, emit the Kanata header and a `C=`
-    /// command anchoring the simulation at `cycle`.
+    /// Create a new `Trace`, emit the Kanata header and
+    /// a `C=` command anchoring the simulation at `cycle`.
     pub fn new(cycle: u32, output: C::Output) -> Result<Self> {
         let mut me = Self {
             output,
